@@ -213,9 +213,18 @@ function pushScore(name, score) {
 }
 function renderLB(el){
   const lb = loadLB();
-  if(!lb.length){ el.innerHTML = '<h3>Top-10</h3><p>Nog geen scores — be first!</p>'; return; }
-  const items = lb.map((e,i)=> `<li><strong>${String(i+1).padStart(2,'0')}.</strong> ${e.name} — ${e.score}</li>`).join('');
-  el.innerHTML = `<h3>Top-10</h3><ol>${items}</ol>`;
+  if(!lb.length){
+    el.innerHTML = '<h3 style="text-align:center;">Top-10 Scoreboard</h3><p style="text-align:center;">No scores yet — be the first!</p>';
+    return;
+  }
+  const items = lb.map((e,i)=> 
+    `<li>${String(i+1).padStart(2,'0')}. ${e.name} — ${e.score}</li>`
+  ).join('');
+  el.innerHTML = `
+    <h3 style="text-align:center;">Top-10 Scoreboard</h3>
+    <ol style="text-align:center; list-style-position: inside; padding:0; margin:0;">
+      ${items}
+    </ol>`;
 }
 
 /* =============================
@@ -563,6 +572,7 @@ nextJoke();
 </script>
 </body>
 </html>
+
 
 
 
