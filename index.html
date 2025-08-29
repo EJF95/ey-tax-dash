@@ -79,20 +79,21 @@
 
       <button class="btn hidden" id="retryBtn" type="button">↻ Retry</button>
 
-      <!-- Intro met Top-10 -->
-      <div class="overlay" id="intro">
-        <div class="card">
-          <h1>EY Tax Dash</h1>
-          <p>Jump over obstacles and survive as long as possible. ↑ / Space / Tap to jump.</p>
-          <div class="grid">
-            <div class="tag">Increasing speed</div>
-            <div class="tag">Funny tax one-liners</div>
-            <div class="tag">High score (Top-10)</div>
-          </div>
-          <div class="scores" id="leaderboardIntro"></div>
-          <p style="margin-top:14px"><button class="btn" id="startBtn" type="button">Start Game</button></p>
-        </div>
-      </div>
+<div class="overlay" id="intro">
+  <div class="card">
+    <h1>EY Tax Dash</h1>
+    <p>
+      Jump over obstacles and survive as long as you can. Use ↑ / Space / Tap to jump.
+    </p>
+
+    <!-- Top-10 leaderboard (intro view) -->
+    <div class="scores" id="leaderboardIntro"></div>
+
+    <p style="margin-top:14px">
+      <button class="btn" id="startBtn" type="button">Start Game</button>
+    </p>
+  </div>
+</div>
 
       <!-- Game over + initialen invoer + death joke -->
       <div class="overlay hidden" id="gameover">
@@ -101,7 +102,7 @@
           <p><span id="finalScore">0</span> points</p>
           <p id="deathJoke" style="font-style: italic; margin: 6px 0"></p>
           <div class="inline" style="margin:8px 0 12px">
-            <input id="initials" class="field" maxlength="5" placeholder="JOUW 5 LETTERS"/>
+            <input id="initials" class="field" maxlength="5" placeholder="ENTER YOUR NAME"/>
             <button class="btn" id="saveScore" type="button">Save</button>
           </div>
           <p><strong id="highline"></strong></p>
@@ -562,6 +563,7 @@ nextJoke();
 </script>
 </body>
 </html>
+
 
 
 
