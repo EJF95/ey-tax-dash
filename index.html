@@ -2,198 +2,566 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EY Tax Dash — Runner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EY Tax Dash</title>
   <style>
-    :root{
-      --sky:#b3e5ff; --sun:#ffd95e; --cloud:#ffffff; --ui:#0a2540; --ey-yellow:#ffe600;
-      --text:#102a43; --panel:#ffffffcc;
+    :root { --sky:#b3e5ff; --ey:#ffe600; --txt:#102a43; --panel:#ffffffcc; }
+    html, body {
+      margin: 0; height: 100%;
+      background: linear-gradient(#f0fbff,#e7f7ff);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color: var(--txt);
     }
-    html, body{ margin:0; height:100%; background:linear-gradient(#f0fbff,#e7f7ff); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color:var(--text);} 
-    .wrap{display:flex; align-items:center; justify-content:center; min-height:100vh;}
-    .game-shell{position:relative; width:min(960px,96vw); aspect-ratio:16/9; background:#9be7ff; border-radius:20px; overflow:hidden; box-shadow:0 20px 50px #00000020;}
-    canvas{position:absolute; inset:0; width:100%; height:100%; background:var(--sky);}    
-    .hud{position:absolute; top:0; left:0; right:0; padding:10px 14px; display:flex; align-items:center; gap:10px; justify-content:space-between; pointer-events:none;}
-    .pill{background:var(--panel); backdrop-filter:blur(6px); border-radius:999px; padding:8px 12px; font-weight:700; display:flex; gap:10px; align-items:center; box-shadow:0 6px 18px #00000016;}
-    .pill small{font-weight:600; opacity:.75;}
-    .brand{pointer-events:none; user-select:none; display:flex; align-items:center; gap:8px;}
-    .brand .logo{width:18px; height:18px; background:var(--ey-yellow); border-radius:3px; box-shadow:0 6px 0 #e0cc00 inset;}
-    .btn{padding:10px 16px; border-radius:999px; border:none; font-weight:800; background:var(--ey-yellow); box-shadow:0 10px 24px #e0b20066; cursor:pointer;}
-    .btn:hover{filter:brightness(1.05);}    
-    .overlay{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;}
-    .card{max-width:min(720px,92%); background:var(--panel); padding:22px; border-radius:20px; box-shadow:0 24px 60px #00000030; text-align:center}
-    .list{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-top:8px}
-    .tag{background:#ffffff; padding:6px 10px; border-radius:10px; box-shadow:0 4px 12px #00000012; font-weight:600}
-    .hidden{display:none;}
+    .wrap {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .game {
+      position: relative;
+      width: min(960px, 96vw);
+      aspect-ratio: 16/9;
+      background: #9be7ff;
+      border-radius: 20px; overflow: hidden;
+      box-shadow: 0 20px 50px #0003;
+    }
+    canvas { position: absolute; inset: 0; width: 100%; height: 100%; background: var(--sky); }
+    .hud {
+      position: absolute; top: 0; left: 0; right: 0;
+      padding: 10px 14px;
+      display: flex; justify-content: space-between; gap: 10px;
+      pointer-events: none;
+    }
+    .pill {
+      background: var(--panel);
+      backdrop-filter: blur(6px);
+      border-radius: 999px; padding: 8px 12px;
+      font-weight: 700; display: flex; gap: 10px; align-items: center;
+      box-shadow: 0 6px 18px #0002;
+    }
+    .btn {
+      padding: 10px 16px; border-radius: 999px; border: none;
+      font-weight: 800; background: var(--ey);
+      box-shadow: 0 10px 24px #e0b20066; cursor: pointer;
+    }
+    .btn:hover { filter: brightness(1.05); }
+    .overlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card {
+      max-width: min(860px, 92%);
+      background: var(--panel);
+      padding: 22px; border-radius: 20px;
+      box-shadow: 0 24px 60px #0005;
+      text-align: center;
+    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 8px; }
+    .tag { background: #fff; padding: 6px 10px; border-radius: 10px; box-shadow: 0 4px 12px #0002; font-weight: 600; }
+    .hidden { display: none; }
+    .scores { margin-top: 12px; text-align: left; }
+    .scores h3 { margin: 8px 0 6px; }
+    .scores ol { margin: 0 0 6px 22px; padding: 0; }
+    .scores li { margin: 2px 0; }
+    .inline { display: inline-flex; gap: 8px; align-items: center; justify-content: center; }
+    .field { padding: 8px 10px; border-radius: 10px; border: 1px solid #ccc; font-weight: 700; letter-spacing: 2px; max-width: 160px; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="game-shell" id="game">
+    <div class="game" id="game">
       <canvas id="c"></canvas>
 
+      <!-- HUD: alleen Score + Joke -->
       <div class="hud">
-        <div class="brand pill"><div class="logo"></div><div>EY Tax Dash</div></div>
-        <div class="pill" id="scorePill">Score: <span id="score">0</span> · <small>High: <span id="high">0</span></small></div>
-        <div class="pill">Credits: <span id="coins">0</span> · <small>Power: <span id="power">–</span></small></div>
-        <div class="pill" id="jokePill">💡 <span id="joke">Keep calm & carry forward.</span></div>
+        <div class="pill">Score: <span id="score">0</span> · <small>High: <span id="high">0</span></small></div>
+        <div class="pill">💡 <span id="joke">Keep calm & carry forward.</span></div>
       </div>
 
-      <button class="btn hidden" id="retryBtn">↻ Retry</button>
+      <button class="btn hidden" id="retryBtn" type="button">↻ Retry</button>
 
+      <!-- Intro met Top-10 -->
       <div class="overlay" id="intro">
         <div class="card">
           <h1>EY Tax Dash</h1>
-          <p>Jump over obstacles, collect Compliance Credits, and use power-ups to last as long as possible.</p>
-          <div class="list">
-            <div class="tag">⬆ / Space / Tap: Jump</div>
-            <div class="tag">Power-ups: Double Jump & Slow Time</div>
-            <div class="tag">Avoid: Audit Blocks, TP Tunnels, TX Hurdles… and more!</div>
+          <p>Jump over obstacles and survive as long as possible. ↑ / Space / Tap to jump.</p>
+          <div class="grid">
+            <div class="tag">Increasing speed</div>
+            <div class="tag">Funny tax one-liners</div>
+            <div class="tag">High score (Top-10)</div>
           </div>
-          <p style="margin-top:14px"><button class="btn" id="startBtn">Start Game</button></p>
+          <div class="scores" id="leaderboardIntro"></div>
+          <p style="margin-top:14px"><button class="btn" id="startBtn" type="button">Start Game</button></p>
         </div>
       </div>
 
+      <!-- Game over + initialen invoer + death joke -->
       <div class="overlay hidden" id="gameover">
         <div class="card">
           <h1>Game Over</h1>
-          <p><span id="finalScore">0</span> points · Credits: <span id="finalCoins">0</span></p>
+          <p><span id="finalScore">0</span> points</p>
+          <p id="deathJoke" style="font-style: italic; margin: 6px 0"></p>
+          <div class="inline" style="margin:8px 0 12px">
+            <input id="initials" class="field" maxlength="5" placeholder="JOUW 5 LETTERS"/>
+            <button class="btn" id="saveScore" type="button">Save</button>
+          </div>
           <p><strong id="highline"></strong></p>
-          <p><button class="btn" id="playAgain">Play again</button></p>
+          <div class="scores" id="leaderboardOver"></div>
+          <p><button class="btn" id="playAgain" type="button">Play again — and don’t forget to fill in your timesheet!</button></p>
         </div>
       </div>
     </div>
   </div>
 
 <script>
-// ====== Canvas & sizing ======
+/* =============================
+   Canvas & sizing
+============================= */
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const shell = document.getElementById('game');
-function resize(){ const r = shell.getBoundingClientRect(); const dpr = Math.min(window.devicePixelRatio||1,2); canvas.width=r.width*dpr; canvas.height=r.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);} addEventListener('resize',resize); resize();
 
-// ====== Simple sounds ======
-let audioCtx=null; function beep(freq=440,dur=0.07,type='sine',gain=0.02){ try{ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type=type; o.frequency.value=freq; g.gain.value=gain; o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur);}catch(e){} }
+function resize() {
+  const r = shell.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width  = r.width  * dpr;
+  canvas.height = r.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener('resize', resize);
+resize();
 
-// ====== Jokes ======
-const jokes=[
- 'I withhold affection at 15%.',
- "Arm's length only—no hugging the tax base.",
- 'Keep calm & carry forward.',
- "Don't BEPS my bubble.",
- 'Permanent establishment? Not even a tent.',
- 'Pillar Two? Sounds like Thriller Two.',
- 'My favorite season? Tax seasoning.',
- "Transfer Pricing: sharing is caring (at arm's length).",
- 'Mind the GAAR hole.',
- "I'm outstanding—like a receivable."
+/* =============================
+   Audio (sfx + achtergrondmelodie)
+============================= */
+let audioCtx = null;
+function ensureAudio(){ if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); } }
+
+function beep(freq=440, dur=0.07, type='sine', gain=0.02) {
+  try {
+    ensureAudio();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.value = gain;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur);
+  } catch(e) {}
+}
+
+let musicTimer = null;
+function startMusic(){
+  try{
+    ensureAudio();
+    stopMusic();
+    // kleine loop (C-D-E-F-E-D-C-A)
+    const seq = [523,587,659,698,659,587,523,440];
+    let i=0;
+    musicTimer = setInterval(()=>{
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'triangle'; o.frequency.value = seq[i % seq.length];
+      g.gain.value = 0.01; // zacht
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + 0.22);
+      i++;
+    }, 250);
+  } catch(e){}
+}
+function stopMusic(){ if(musicTimer){ clearInterval(musicTimer); musicTimer=null; } }
+
+/* =============================
+   Jokes
+============================= */
+const jokes = [
+  "I withhold affection at 15%.",
+  "Arm's length only—no hugging the tax base.",
+  "Keep calm & carry forward.",
+  "Don't BEPS my bubble.",
+  "Permanent establishment? Not even a tent.",
+  "Pillar Two? Sounds like Thriller Two.",
+  "My favorite season? Tax seasoning.",
+  "Transfer Pricing: sharing is caring (at arm's length).",
+  "Mind the GAAR hole.",
+  "I'm outstanding—like a receivable."
 ];
 
-// ====== Game state ======
-const state={ started:false, over:false, t:0, speed:6, maxSpeed:18, score:0, coins:0, high:Number(localStorage.getItem('eytaxdash_high')||0), power:null, powerTimer:0 };
-const scoreEl=document.getElementById('score'); const highEl=document.getElementById('high'); highEl.textContent=state.high; const coinsEl=document.getElementById('coins'); const powerEl=document.getElementById('power'); const jokeEl=document.getElementById('joke');
-const introEl=document.getElementById('intro'); const overEl=document.getElementById('gameover'); const retryBtn=document.getElementById('retryBtn'); const playAgain=document.getElementById('playAgain'); const finalScore=document.getElementById('finalScore'); const finalCoins=document.getElementById('finalCoins'); const highline=document.getElementById('highline');
-let jokeTimer=0; function nextJoke(){ jokeEl.textContent = jokes[Math.floor(Math.random()*jokes.length)]; jokeTimer = 6 + Math.random()*6; }
-
-// ====== World ======
-const H=360, W=640; let lastTime=0;
-const layers=[
-  {speed:0.1, draw:(x)=>{ ctx.fillStyle='rgba(255,217,94,0.9)'; ctx.beginPath(); ctx.arc(90,80,40,0,Math.PI*2); ctx.fill(); drawCloud(x*0.5+100,70,1.0); drawCloud(x*0.6+300,110,0.8); drawCloud(x*0.4+500,60,1.1);} },
-  {speed:0.3, draw:(x)=> drawHills(x*0.3,'#bcebd1')},
-  {speed:0.5, draw:(x)=> drawHills(x*0.5,'#8ed1a6')},
-  {speed:1.0, draw:(x)=>{ ctx.fillStyle='#5aa35a'; ctx.fillRect(0,H-60,W,60); drawBushes(x,'#79c879'); }},
+const deathJokes = [
+  "Don't forget to fill in your timesheet!",
+  "DAC6 is watching you 👀",
+  "Even auditors need a coffee break ☕",
+  "Arm's length... but too short this time.",
+  "You hit a Pillar Two wall — literally.",
+  "Permanent establishment? More like permanent game over.",
+  "Mind the GAAR hole... you didn’t.",
+  "Tax ruling expired. So did your run.",
+  "EY says: Quality first. Except for your jump.",
+  "Transfer Pricing? You just transferred into the void."
 ];
-function drawCloud(x,y,s=1){ ctx.fillStyle='#ffffff'; blob(x,y,30*s); blob(x+25,y+10,20*s); blob(x-20,y+12,18*s); blob(x+50,y,16*s);} 
-function blob(x,y,r){ ctx.beginPath(); ctx.arc(mod(x,W),y,r,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(mod(x-W,W),y,r,0,Math.PI*2); ctx.fill(); }
-function drawHills(offset,color){ ctx.fillStyle=color; const base=H-60, amp=26, wave=180; ctx.beginPath(); ctx.moveTo(0,base); for(let x=0;x<=W;x+=4){ const y=base - Math.sin((x+offset)%wave/wave*Math.PI*2)*amp - 20; ctx.lineTo(x,y);} ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill(); }
-function drawBushes(offset,color){ ctx.fillStyle=color; for(let i=0;i<8;i++){ const x=mod(i*120-(offset%120),W); roundedRect(x,H-80,50,26,13,true); roundedRect(x+20,H-70,40,20,10,true);} }
-function roundedRect(x,y,w,h,r,fill){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); if(fill) ctx.fill(); else ctx.stroke(); }
-function mod(a,b){ return ((a%b)+b)%b; }
 
-// ====== Player ======
-const player={ x:80,y:0,w:30,h:36,vy:0,onGround:false,jumps:0,
-  reset(){ this.y=H-60-36; this.vy=0; this.onGround=true; this.jumps=0; },
-  jump(){ const allowDouble=state.power==='double'; if(this.onGround || (allowDouble && this.jumps<2)){ this.vy=-10.6; this.onGround=false; this.jumps++; beep(660,0.07,'triangle',0.03);} },
-  step(dt){ const g=24*dt; this.vy+=g; this.y+=this.vy; const floor=H-60-this.h; if(this.y>=floor){ this.y=floor; this.vy=0; this.onGround=true; this.jumps=0; } },
-  draw(){ const {x,y,w,h}=this; ctx.globalAlpha=0.25; ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(x+w/2,y+h,16,6,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; ctx.fillStyle='#1e3a5f'; roundedRect(x,y,w,h,6,true); ctx.fillStyle='#ffd7b5'; ctx.beginPath(); ctx.arc(x+w/2,y-6,10,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#7a4b2e'; ctx.beginPath(); ctx.arc(x+w/2,y-10,10,Math.PI,0); ctx.fill(); ctx.fillStyle='#222'; ctx.fillRect(x+10,y-8,2,2); ctx.fillRect(x+18,y-8,2,2); ctx.fillStyle='var(--ey-yellow)'; ctx.beginPath(); ctx.moveTo(x+w/2-2,y+6); ctx.lineTo(x+w/2+2,y+6); ctx.lineTo(x+w/2,y+16); ctx.closePath(); ctx.fill(); ctx.fillStyle='#6d4c41'; roundedRect(x-12,y+10,14,10,2,true); ctx.fillStyle='#3e2723'; ctx.fillRect(x-8,y+13,6,2); }
+/* =============================
+   Leaderboard (Top-10, localStorage)
+============================= */
+const LB_KEY='eytaxdash_leaderboard';
+function loadLB(){ try { return JSON.parse(localStorage.getItem(LB_KEY) || '[]'); } catch { return []; } }
+function saveLB(arr){ localStorage.setItem(LB_KEY, JSON.stringify(arr)); }
+function pushScore(name, score) {
+  const lb = loadLB();
+  lb.push({ name: name.slice(0,5).toUpperCase(), score, ts: Date.now() });
+  lb.sort((a,b)=> b.score - a.score);
+  saveLB(lb.slice(0,10));
+}
+function renderLB(el){
+  const lb = loadLB();
+  if(!lb.length){ el.innerHTML = '<h3>Top-10</h3><p>Nog geen scores — be first!</p>'; return; }
+  const items = lb.map((e,i)=> `<li><strong>${String(i+1).padStart(2,'0')}.</strong> ${e.name} — ${e.score}</li>`).join('');
+  el.innerHTML = `<h3>Top-10</h3><ol>${items}</ol>`;
+}
+
+/* =============================
+   Game state & refs
+============================= */
+const state = {
+  started:false, over:false,
+  t:0, speed:6, maxSpeed:18,
+  score:0, high:Number(localStorage.getItem('eytaxdash_high')||0)
 };
 
-// ====== Entities ======
-const obstacles=[], coins=[], powerups=[], particles=[]; let spawnCooldown=0, coinCooldown=0, powerCooldown=0;
-function spawnObstacle(){
-  const types=[
-    {name:'Audit Block', w:26,h:32,color:'#ff6b6b',tag:'AUD'},
-    {name:'TP Tunnel', w:40,h:24,color:'#ff9671',tag:'TP'},
-    {name:'Transaction Hurdle', w:22,h:38,color:'#ff8066',tag:'TXN'},
-    {name:'BEPS Boulder', w:30,h:30,color:'#ffadad',tag:'BEPS'},
-    {name:'DAC6 Cone', w:18,h:34,color:'#ffc6ff',tag:'D6'},
-    {name:'Pillar Two Plate', w:44,h:16,color:'#ffd166',tag:'P2'},
-    {name:'Withholding Wall', w:36,h:28,color:'#fd8a8a',tag:'WHT'},
-    {name:'PE Pit', w:28,h:26,color:'#bdb2ff',tag:'PE'},
-    {name:'Substance Slope', w:34,h:20,color:'#9bf6ff',tag:'SUB'},
-    {name:'VAT Gap', w:26,h:22,color:'#caffbf',tag:'VAT'}
-  ];
-  const t=types[Math.floor(Math.random()*types.length)];
-  obstacles.push({x:W+20,y:H-60-t.h,w:t.w,h:t.h,color:t.color,name:t.name,tag:t.tag});
-}
-function spawnCoin(){ const y=H-60- Math.random()*120 - 20; coins.push({x:W+20,y,r:10,value:1}); }
-function spawnPower(){ const kind=Math.random()<0.5?'double':'slow'; const y=H-60- Math.random()*120 - 30; powerups.push({x:W+20,y,r:13,kind}); }
-function rectsOverlap(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
-function playerCoinOverlap(c){ const dx=(player.x+player.w/2)-c.x; const dy=(player.y+player.h/2)-c.y; return Math.hypot(dx,dy) < c.r + Math.min(player.w,player.h)/2; }
-function puff(x,y,color){ for(let i=0;i<6;i++) particles.push({x,y,vx:(Math.random()-0.5)*2,vy:-Math.random()*1.5,life:0.6,color}); }
+const scoreEl = document.getElementById('score');
+const highEl  = document.getElementById('high'); highEl.textContent = state.high;
+const jokeEl  = document.getElementById('joke');
 
-// ====== Loop ======
+const introEl    = document.getElementById('intro');
+const overEl     = document.getElementById('gameover');
+const retryBtn   = document.getElementById('retryBtn');
+const playAgain  = document.getElementById('playAgain');
+const finalScore = document.getElementById('finalScore');
+const highline   = document.getElementById('highline');
+
+const initialsEl = document.getElementById('initials');
+const saveScoreBtn = document.getElementById('saveScore');
+
+const lbIntro = document.getElementById('leaderboardIntro');
+const lbOver  = document.getElementById('leaderboardOver');
+const deathJokeEl = document.getElementById('deathJoke');
+
+let jokeTimer = 0;
+function nextJoke(){
+  jokeEl.textContent = jokes[Math.floor(Math.random()*jokes.length)];
+  jokeTimer = 6 + Math.random()*6;
+}
+
+/* =============================
+   World (parallax)
+============================= */
+const H=360, W=640; let lastTime=0;
+
+const layers = [
+  { speed:0.1, draw:(x)=>{
+      ctx.fillStyle='rgba(255,217,94,0.9)';
+      ctx.beginPath(); ctx.arc(90,80,40,0,Math.PI*2); ctx.fill();
+      drawCloud(x*0.5+100,70,1.0); drawCloud(x*0.6+300,110,0.8); drawCloud(x*0.4+500,60,1.1);
+    }},
+  { speed:0.3, draw:(x)=> drawHills(x*0.3,'#bcebd1') },
+  { speed:0.5, draw:(x)=> drawHills(x*0.5,'#8ed1a6') },
+  { speed:1.0, draw:(x)=>{ ctx.fillStyle='#5aa35a'; ctx.fillRect(0,H-60,W,60); drawBushes(x,'#79c879'); } }
+];
+
+function drawCloud(x,y,s=1){
+  ctx.fillStyle='#ffffff';
+  blob(x,y,30*s); blob(x+25,y+10,20*s); blob(x-20,y+12,18*s); blob(x+50,y,16*s);
+}
+function blob(x,y,r){
+  ctx.beginPath(); ctx.arc(mod(x,W),y,r,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(mod(x-W,W),y,r,0,Math.PI*2); ctx.fill();
+}
+function drawHills(offset,color){
+  ctx.fillStyle=color;
+  const base=H-60, amp=26, wave=180;
+  ctx.beginPath(); ctx.moveTo(0,base);
+  for(let x=0;x<=W;x+=4){
+    const y=base - Math.sin((x+offset)%wave/wave*Math.PI*2)*amp - 20;
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
+}
+function drawBushes(offset,color){
+  ctx.fillStyle=color;
+  for(let i=0;i<8;i++){
+    const x=mod(i*120-(offset%120),W);
+    roundedRect(x,   H-80, 50,26,13,true);
+    roundedRect(x+20,H-70, 40,20,10,true);
+  }
+}
+function roundedRect(x,y,w,h,r,fill){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y, x+w,y+h, r);
+  ctx.arcTo(x+w,y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  fill ? ctx.fill() : ctx.stroke();
+}
+function mod(a,b){ return ((a%b)+b)%b; }
+
+/* =============================
+   Player
+============================= */
+const player = {
+  x:80, y:0, w:30, h:36, vy:0, onGround:false, jumps:0,
+  reset(){
+    this.y = H-60-36; this.vy=0; this.onGround=true; this.jumps=0;
+  },
+  jump(){
+    if(this.onGround){
+      this.vy = -10.6; this.onGround=false; this.jumps=1;
+      beep(660,0.07,'triangle',0.03);
+    }
+  },
+  step(dt){
+    const g = 24*dt;
+    this.vy += g;
+    this.y  += this.vy;
+    const floor = H-60-this.h;
+    if(this.y >= floor){
+      this.y = floor; this.vy=0; this.onGround=true; this.jumps=0;
+    }
+  },
+  draw(){
+    const {x,y,w,h}=this;
+    // shadow
+    ctx.globalAlpha=0.25; ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.ellipse(x+w/2,y+h,16,6,0,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+    // body
+    ctx.fillStyle='#1e3a5f'; roundedRect(x,y,w,h,6,true);
+    // head
+    ctx.fillStyle='#ffd7b5'; ctx.beginPath(); ctx.arc(x+w/2,y-6,10,0,Math.PI*2); ctx.fill();
+    // hair
+    ctx.fillStyle='#7a4b2e'; ctx.beginPath(); ctx.arc(x+w/2,y-10,10,Math.PI,0); ctx.fill();
+    // eyes
+    ctx.fillStyle='#222'; ctx.fillRect(x+10,y-8,2,2); ctx.fillRect(x+18,y-8,2,2);
+    // tie
+    ctx.fillStyle='#ffe600'; ctx.beginPath(); ctx.moveTo(x+w/2-2,y+6); ctx.lineTo(x+w/2+2,y+6); ctx.lineTo(x+w/2,y+16); ctx.closePath(); ctx.fill();
+    // briefcase
+    ctx.fillStyle='#6d4c41'; roundedRect(x-12,y+10,14,10,2,true);
+    ctx.fillStyle='#3e2723'; ctx.fillRect(x-8,y+13,6,2);
+  }
+};
+
+/* =============================
+   Obstacles (variatie)
+============================= */
+const obstacles = [];
+let spawnCooldown = 0;
+
+function spawnObstacle(){
+  const types = [
+    { w:26, h:32, color:'#ff6b6b', tag:'AUD' },   // Audit Block
+    { w:40, h:24, color:'#ff9671', tag:'TP'  },   // TP Tunnel
+    { w:22, h:38, color:'#ff8066', tag:'TXN' },   // Transaction Hurdle
+    { w:30, h:36, color:'#82c0ff', tag:'LAW' },   // Wettenbundel
+    { w:18, h:44, color:'#ffb3ba', tag:'INS' },   // Boze Inspecteur
+    { w:20, h:30, color:'#caa472', tag:'GAV' },   // Gavel
+    { w:24, h:34, color:'#a0a0a0', tag:'CALC'},   // Calculator
+    { w:34, h:22, color:'#ffe29a', tag:'MEMO'},   // Memo Stapel
+    { w:36, h:28, color:'#fd8a8a', tag:'WHT' },   // Withholding Wall
+    { w:44, h:16, color:'#ffd166', tag:'P2'  },   // Pillar Two Plate
+    { w:26, h:22, color:'#caffbf', tag:'VAT' }    // VAT Gap
+  ];
+  const o = types[Math.floor(Math.random()*types.length)];
+  obstacles.push({ x: W+20, y: H-60-o.h, w:o.w, h:o.h, color:o.color, tag:o.tag });
+}
+
+function rectsOverlap(a,b){
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+/* =============================
+   Game loop
+============================= */
 function update(dt){
-  state.t+=dt; state.speed=Math.min(state.maxSpeed,6+state.t*0.8); state.score+=dt*(10+state.speed);
-  jokeTimer-=dt; if(jokeTimer<=0) nextJoke();
-  spawnCooldown-=dt; coinCooldown-=dt; powerCooldown-=dt;
-  if(spawnCooldown<=0){ spawnObstacle(); spawnCooldown=Math.max(0.45,1.2-state.t*0.05);} 
-  if(coinCooldown<=0){ for(let i=0;i<1+Math.floor(Math.random()*2);i++) spawnCoin(); coinCooldown=0.8+Math.random()*0.8; }
-  if(powerCooldown<=0){ spawnPower(); powerCooldown=9+Math.random()*6; }
-  const vx=state.speed*60*dt; obstacles.forEach(o=>o.x-=vx); coins.forEach(c=>c.x-=vx); powerups.forEach(p=>p.x-=vx);
-  while(obstacles.length && obstacles[0].x+obstacles[0].w<-10) obstacles.shift();
-  while(coins.length && coins[0].x+coins[0].r<-10) coins.shift();
-  while(powerups.length && powerups[0].x+powerups[0].r<-10) powerups.shift();
-  player.step(dt*(state.power==='slow'?0.6:1));
-  for(const o of obstacles){ if(rectsOverlap({x:player.x,y:player.y,w:player.w,h:player.h},o)){ jokeEl.textContent='That was a hard audit hit.'; gameOver(); return; } }
-  for(let i=coins.length-1;i>=0;i--){ const c=coins[i]; if(playerCoinOverlap(c)){ coins.splice(i,1); state.coins+=c.value; puff(c.x,c.y,'#ffd166'); state.score+=15; beep(880,0.08,'sine',0.03); if(Math.random()<0.35) nextJoke(); }}
-  for(let i=powerups.length-1;i>=0;i--){ const p=powerups[i]; if(playerCoinOverlap(p)){ powerups.splice(i,1); state.power=p.kind; state.powerTimer=6; puff(p.x,p.y,p.kind==='double'?'#7bed9f':'#7bdff2'); beep(520,0.12,'square',0.035); jokeEl.textContent=p.kind==='double'?'Double the jump, double the deductions.':'Time slowed—like a long tax ruling.'; jokeTimer=5; }}
-  if(state.power){ state.powerTimer-=dt; if(state.powerTimer<=0){ state.power=null; state.powerTimer=0; }}
-  scoreEl.textContent=Math.floor(state.score); coinsEl.textContent=state.coins; powerEl.textContent= state.power ? (state.power==='double'?'Double Jump':'Slow Time')+` (${Math.ceil(state.powerTimer)}s)` : '–';
+  // tijd/snelheid/score
+  state.t += dt;
+  state.speed = Math.min(state.maxSpeed, 6 + state.t*0.8);
+  state.score += dt * (10 + state.speed);
+
+  // grap om de paar seconden
+  jokeTimer -= dt;
+  if(jokeTimer <= 0) nextJoke();
+
+  // spawn obstakels
+  spawnCooldown -= dt;
+  if(spawnCooldown <= 0){
+    spawnObstacle();
+    spawnCooldown = Math.max(0.45, 1.2 - state.t*0.05);
+  }
+
+  // beweeg obstakels
+  const vx = state.speed * 60 * dt;
+  obstacles.forEach(o => o.x -= vx);
+  while(obstacles.length && obstacles[0].x + obstacles[0].w < -10) obstacles.shift();
+
+  // speler
+  player.step(dt);
+
+  // botsing
+  for(const o of obstacles){
+    if(rectsOverlap({x:player.x,y:player.y,w:player.w,h:player.h}, o)){
+      gameOver();
+      return;
+    }
+  }
+
+  // UI
+  scoreEl.textContent = Math.floor(state.score);
 }
 
 function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height); ctx.save(); const r=shell.getBoundingClientRect(); const scale=Math.min(r.width/W, r.height/H); ctx.scale(scale,scale);
-  const parx=state.t*60*state.speed; layers.forEach(L=>{ ctx.save(); L.draw(parx*L.speed); ctx.restore(); });
-  ctx.strokeStyle='#2e6e2e'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,H-60); ctx.lineTo(W,H-60); ctx.stroke();
-  for(const c of coins){ const x=mod(c.x,W) + Math.sin(state.t*8+c.x*0.05)*1.5, y=c.y; ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.arc(x,y,c.r,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#b08900'; ctx.fillRect(x-2,y-6,4,12); }
-  for(const p of powerups){ const x=p.x, y=p.y; ctx.beginPath(); ctx.arc(x,y,p.r,0,Math.PI*2); ctx.fillStyle=p.kind==='double' ? '#7bed9f' : '#7bdff2'; ctx.fill(); ctx.fillStyle='#084c61'; ctx.font='bold 10px system-ui'; ctx.textAlign='center'; ctx.fillText(p.kind==='double'?'DJ':'ST', x, y+3); }
-  for(const o of obstacles){ ctx.fillStyle=o.color; roundedRect(o.x, o.y, o.w, o.h, 4, true); ctx.fillStyle='#fff'; ctx.font = 'bold 9px system-ui'; ctx.textAlign='center'; const label=o.tag||'OB'; ctx.fillText(label, o.x+o.w/2, o.y+o.h/2+3); }
-  for(let i=particles.length-1;i>=0;i--){ const p=particles[i]; p.life-=1/60; p.x+=p.vx; p.y+=p.vy; if(p.life<=0) particles.splice(i,1); ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.save();
+  const r = shell.getBoundingClientRect();
+  const scale = Math.min(r.width/W, r.height/H);
+  ctx.scale(scale,scale);
+
+  // parallax
+  const parx = state.t*60*state.speed;
+  layers.forEach(L=>{ ctx.save(); L.draw(parx*L.speed); ctx.restore(); });
+
+  // grondlijn
+  ctx.strokeStyle='#2e6e2e'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,H-60); ctx.lineTo(W,H-60); ctx.stroke();
+
+  // obstakels
+  for(const o of obstacles){
+    ctx.fillStyle=o.color;
+    roundedRect(o.x,o.y,o.w,o.h,4,true);
+    ctx.fillStyle='#fff';
+    ctx.font='bold 9px system-ui';
+    ctx.textAlign='center';
+    ctx.fillText(o.tag, o.x + o.w/2, o.y + o.h/2 + 3);
+  }
+
+  // speler
   player.draw();
-  ctx.fillStyle='rgba(255,230,0,0.9)'; ctx.beginPath(); ctx.moveTo(W-140,0); ctx.lineTo(W,0); ctx.lineTo(W,40); ctx.closePath(); ctx.fill(); ctx.fillStyle='#0f172a'; ctx.font='bold 12px system-ui'; ctx.textAlign='right'; ctx.fillText('EY', W-8, 14);
+
   ctx.restore();
 }
 
-function frame(ts){ if(!state.started){ draw(); return requestAnimationFrame(frame);} let dt=(ts-lastTime)/1000||0; lastTime=ts; dt=Math.min(dt,0.033); if(state.power==='slow') dt*=0.6; if(!state.over){ update(dt); draw(); } requestAnimationFrame(frame); }
+function frame(ts){
+  if(!state.started){ draw(); return requestAnimationFrame(frame); }
+  let dt = (ts - lastTime) / 1000 || 0;
+  lastTime = ts;
+  dt = Math.min(dt, 0.033);
+  if(!state.over){
+    update(dt);
+    draw();
+  }
+  requestAnimationFrame(frame);
+}
 requestAnimationFrame(frame);
 
-function gameOver(){ state.over=true; beep(180,0.24,'sawtooth',0.05); finalScore.textContent=Math.floor(state.score); finalCoins.textContent=state.coins; if(state.score>state.high){ state.high=Math.floor(state.score); localStorage.setItem('eytaxdash_high',state.high); highEl.textContent=state.high; highline.textContent='New high score! '+state.high; } else { highline.textContent='High score: '+state.high; } overEl.classList.remove('hidden'); retryBtn.classList.remove('hidden'); }
+/* =============================
+   Lifecycle (start/over/reset)
+============================= */
+function gameOver(){
+  state.over = true;
+  stopMusic();
+  beep(180,0.24,'sawtooth',0.05);
 
-function reset(){ state.started=true; state.over=false; state.t=0; state.speed=6; state.score=0; state.coins=0; state.power=null; state.powerTimer=0; player.reset(); obstacles.length=0; coins.length=0; powerups.length=0; particles.length=0; spawnCooldown=0; coinCooldown=30; powerCooldown=420; introEl.classList.add('hidden'); overEl.classList.add('hidden'); retryBtn.classList.add('hidden'); nextJoke(); }
+  const sc = Math.floor(state.score);
+  finalScore.textContent = sc;
+
+  // high score (individueel)
+  if(sc > state.high){
+    state.high = sc;
+    localStorage.setItem('eytaxdash_high', state.high);
+    highEl.textContent = state.high;
+    highline.textContent = 'New high score! ' + state.high;
+  } else {
+    highline.textContent = 'High score: ' + state.high;
+  }
+
+  // death joke
+  deathJokeEl.textContent = deathJokes[Math.floor(Math.random()*deathJokes.length)];
+
+  // leaderboard tonen in over-scherm
+  renderLB(lbOver);
+
+  overEl.classList.remove('hidden');
+  retryBtn.classList.remove('hidden');
+
+  // focus op initialen
+  initialsEl.focus();
+}
+
+function reset(){
+  state.started = true;
+  state.over    = false;
+  state.t = 0; state.speed = 6; state.score = 0;
+
+  player.reset();
+  obstacles.length = 0;
+  spawnCooldown = 0;
+
+  introEl.classList.add('hidden');
+  overEl.classList.add('hidden');
+  retryBtn.classList.add('hidden');
+
+  nextJoke();
+}
 
 function doJump(){ if(!state.started){ start(); } else { player.jump(); } }
-function start(){ reset(); beep(440,0.06); beep(660,0.06); }
+function start(){
+  reset();
+  startMusic();
+  beep(440,0.06); beep(660,0.06);
+}
 
-// Controls
-addEventListener('keydown', (e)=>{ if(['ArrowUp','Space','KeyW'].includes(e.code)){ e.preventDefault(); doJump(); } if(state.over && e.code==='Enter'){ reset(); } }, {passive:false});
+/* =============================
+   Controls
+============================= */
+addEventListener('keydown', (e)=>{
+  if(['ArrowUp','Space','KeyW'].includes(e.code)){
+    e.preventDefault(); doJump();
+  }
+  if(state.over && e.code==='Enter'){
+    saveInitials();
+  }
+}, {passive:false});
+
 canvas.addEventListener('pointerdown', ()=> doJump());
-document.getElementById('playAgain').addEventListener('click', ()=> reset());
-retryBtn.addEventListener('click', ()=> reset());
-document.getElementById('startBtn').addEventListener('click', ()=> start());
 
-// Accessibility
-canvas.setAttribute('tabindex','0'); canvas.addEventListener('focus',()=>{ shell.style.outline='2px solid #ffe600';}); canvas.addEventListener('blur',()=>{ shell.style.outline='none';});
+document.getElementById('startBtn').addEventListener('click', start);
+document.getElementById('playAgain').addEventListener('click', reset);
+document.getElementById('retryBtn').addEventListener('click', reset);
+
+/* =============================
+   Score opslaan / Leaderboard
+============================= */
+function saveInitials(){
+  if(!state.over) return;
+  const name = (initialsEl.value || 'ANON').toUpperCase().slice(0,5);
+  const sc = Math.floor(state.score) || Number(finalScore.textContent) || 0;
+  pushScore(name, sc);
+  initialsEl.value = '';
+  renderLB(lbOver);
+  renderLB(lbIntro);
+}
+saveScoreBtn.addEventListener('click', saveInitials);
+
+/* =============================
+   Init
+============================= */
+renderLB(lbIntro);
+nextJoke();
+
+/* =============================
+   Helpers (duplicate-safe)
+============================= */
+// (redeclared above for clarity if needed)
 </script>
 </body>
 </html>
+
+
+
